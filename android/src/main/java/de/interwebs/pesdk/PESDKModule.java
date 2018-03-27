@@ -221,13 +221,15 @@ public class PESDKModule extends ReactContextBaseJavaModule {
 
 
                 /* Set Filters */
-                ReadableArray filtersConfig = custom.getArray("filters");
-                for (int i = 0; i < filtersConfig.size(); i++) {
-                    ReadableMap filter = filtersConfig.getMap(i);
-                    String filter_id = filter.getString("id");
-                    String filter_label = filter.getString("label");
+                if( custom.hasKey("filters") ) {
+                    ReadableArray filtersConfig = custom.getArray("filters");
+                    for (int i = 0; i < filtersConfig.size(); i++) {
+                        ReadableMap filter = filtersConfig.getMap(i);
+                        String filter_id = filter.getString("id");
+                        String filter_label = filter.getString("label");
 
-                    filters.add(new LutColorFilter(filter_id, ctx.getResources().getIdentifier(filter_id, "string", ctx.getPackageName()), R.drawable.imgly_filter_preview_photo, ImageSource.create(ctx.getResources().getIdentifier(filter_id, "drawable", ctx.getPackageName())), 5, 5, 128));
+                        filters.add(new LutColorFilter(filter_id, ctx.getResources().getIdentifier(filter_id, "string", ctx.getPackageName()), R.drawable.imgly_filter_preview_photo, ImageSource.create(ctx.getResources().getIdentifier(filter_id, "drawable", ctx.getPackageName())), 5, 5, 128));
+                    }
                 }
 
                 config.setFilters(filters);
@@ -247,54 +249,56 @@ public class PESDKModule extends ReactContextBaseJavaModule {
 
 
                 /* Set Overlays */
-                ReadableArray overlaysConfig = custom.getArray("overlays");
-                for (int i = 0; i < overlaysConfig.size(); i++) {
-                    ReadableMap overlay = overlaysConfig.getMap(i);
-                    String overlay_id = overlay.getString("id");
-                    String overlay_label = overlay.getString("label");
-                    String overlay_blendmode = overlay.getString("blendMode").toLowerCase();
+                if( custom.hasKey("overlays") ){
+                    ReadableArray overlaysConfig = custom.getArray("overlays");
+                    for (int i = 0; i < overlaysConfig.size(); i++) {
+                        ReadableMap overlay = overlaysConfig.getMap(i);
+                        String overlay_id = overlay.getString("id");
+                        String overlay_label = overlay.getString("label");
+                        String overlay_blendmode = overlay.getString("blendMode").toLowerCase();
 
-                    BlendMode defaultBlendMode = BlendMode.NORMAL;
-                    switch(overlay_blendmode){
-                        case "color_burn":
-                           defaultBlendMode = BlendMode.COLOR_BURN;
-                           break;
-                        case "darken":
-                            defaultBlendMode = BlendMode.DARKEN;
+                        BlendMode defaultBlendMode = BlendMode.NORMAL;
+                        switch(overlay_blendmode){
+                            case "color_burn":
+                            defaultBlendMode = BlendMode.COLOR_BURN;
                             break;
-                        case "lighten":
-                            defaultBlendMode = BlendMode.LIGHTEN;
-                            break;
-                        case "hard_light":
-                            defaultBlendMode = BlendMode.HARD_LIGHT;
-                            break;
-                        case "soft_light":
-                            defaultBlendMode = BlendMode.SOFT_LIGHT;
-                            break;
-                        case "multiply":
-                            defaultBlendMode = BlendMode.MULTIPLY;
-                            break;
-                        case "overlay":
-                            defaultBlendMode = BlendMode.OVERLAY;
-                            break;
-                        case "screen":
-                            defaultBlendMode = BlendMode.SCREEN;
-                            break;
-                        case "normal":
-                        default:
-                            defaultBlendMode = BlendMode.NORMAL;
+                            case "darken":
+                                defaultBlendMode = BlendMode.DARKEN;
+                                break;
+                            case "lighten":
+                                defaultBlendMode = BlendMode.LIGHTEN;
+                                break;
+                            case "hard_light":
+                                defaultBlendMode = BlendMode.HARD_LIGHT;
+                                break;
+                            case "soft_light":
+                                defaultBlendMode = BlendMode.SOFT_LIGHT;
+                                break;
+                            case "multiply":
+                                defaultBlendMode = BlendMode.MULTIPLY;
+                                break;
+                            case "overlay":
+                                defaultBlendMode = BlendMode.OVERLAY;
+                                break;
+                            case "screen":
+                                defaultBlendMode = BlendMode.SCREEN;
+                                break;
+                            case "normal":
+                            default:
+                                defaultBlendMode = BlendMode.NORMAL;
+                        }
+
+                        overlays.add(
+                            new OverlayConfig(
+                                overlay_id,
+                                overlay_label,
+                                ImageSource.create(ctx.getResources().getIdentifier(overlay_id+"_thumb", "drawable", ctx.getPackageName())),
+                                ImageSource.create(ctx.getResources().getIdentifier(overlay_id, "drawable", ctx.getPackageName())),
+                                defaultBlendMode,
+                                1f
+                            )
+                        );
                     }
-
-                    overlays.add(
-                        new OverlayConfig(
-                            overlay_id,
-                            overlay_label,
-                            ImageSource.create(ctx.getResources().getIdentifier(overlay_id+"_thumb", "drawable", ctx.getPackageName())),
-                            ImageSource.create(ctx.getResources().getIdentifier(overlay_id, "drawable", ctx.getPackageName())),
-                            defaultBlendMode,
-                            1f
-                        )
-                    );
                 }
 
                 config.setOverlays(overlays);
@@ -311,40 +315,43 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                 }
 
 
-                /* Set Filters */
-                ReadableArray stickerCatsConfig = custom.getArray("stickerCategories");
-                for (int i = 0; i < stickerCatsConfig.size(); i++) {
-                    ReadableMap stickerCat = stickerCatsConfig.getMap(i);
-                    String stickerCat_id = stickerCat.getString("id");
-                    String stickerCat_label = stickerCat.getString("label");
+                /* Set Sticker Categories */
+                if( custom.hasKey("stickerCategories") ){
+                    ReadableArray stickerCatsConfig = custom.getArray("stickerCategories");
+                    for (int i = 0; i < stickerCatsConfig.size(); i++) {
+                        ReadableMap stickerCat = stickerCatsConfig.getMap(i);
+                        String stickerCat_id = stickerCat.getString("id");
+                        String stickerCat_label = stickerCat.getString("label");
 
-                    ReadableArray stickersArray = stickerCat.getArray("stickers");
-                    ArrayList<StickerConfigInterface> stickers = new ArrayList<StickerConfigInterface>();
+                        /* Set Stickers */
+                        ReadableArray stickersArray = stickerCat.getArray("stickers");
+                        ArrayList<StickerConfigInterface> stickers = new ArrayList<StickerConfigInterface>();
 
-                    for (int j = 0; j < stickersArray.size(); j++) {
-                        ReadableMap sticker = stickersArray.getMap(i);
-                        String sticker_id = sticker.getString("id");
-                        String sticker_label = sticker_id;
-                        if(sticker.hasKey("label"))
-                            sticker_label = sticker.getString("label");
+                        for (int j = 0; j < stickersArray.size(); j++) {
+                            ReadableMap sticker = stickersArray.getMap(i);
+                            String sticker_id = sticker.getString("id");
+                            String sticker_label = sticker_id;
+                            if(sticker.hasKey("label"))
+                                sticker_label = sticker.getString("label");
 
-                        stickers.add(
-                            new ImageStickerConfig(
-                                sticker_id,
-                                sticker_label,
-                                ImageSource.create(ctx.getResources().getIdentifier(sticker_id+"_thumb", "drawable", ctx.getPackageName())),
-                                ImageSource.create(ctx.getResources().getIdentifier(sticker_id, "drawable", ctx.getPackageName()))
+                            stickers.add(
+                                new ImageStickerConfig(
+                                    sticker_id,
+                                    sticker_label,
+                                    ImageSource.create(ctx.getResources().getIdentifier(sticker_id+"_thumb", "drawable", ctx.getPackageName())),
+                                    ImageSource.create(ctx.getResources().getIdentifier(sticker_id, "drawable", ctx.getPackageName()))
+                                )
+                            );
+                        }
+
+                        stickerCats.add(
+                            new StickerCategoryConfig(
+                                stickerCat_label,
+                                ImageSource.create(ctx.getResources().getIdentifier(stickerCat_id, "drawable", ctx.getPackageName())),
+                                stickers
                             )
                         );
                     }
-
-                    stickerCats.add(
-                        new StickerCategoryConfig(
-                            stickerCat_label,
-                            ImageSource.create(ctx.getResources().getIdentifier(stickerCat_id, "drawable", ctx.getPackageName())),
-                            stickers
-                        )
-                    );
                 }
 
                 config.setStickerLists(stickerCats);
