@@ -12,6 +12,7 @@ package de.interwebs.pesdk;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -30,8 +31,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import ly.img.android.sdk.decoder.ImageSource;
+import ly.img.android.sdk.filter.LutColorFilter;
+import ly.img.android.sdk.filter.NoneImageFilter;
 import ly.img.android.sdk.models.config.Divider;
+import ly.img.android.sdk.models.config.StickerCategoryConfig;
+import ly.img.android.sdk.models.config.ImageStickerConfig;
+import ly.img.android.sdk.models.config.interfaces.ImageFilterInterface;
 import ly.img.android.sdk.models.config.interfaces.ToolConfigInterface;
+import ly.img.android.sdk.models.config.interfaces.StickerListConfigInterface;
+import ly.img.android.sdk.models.config.interfaces.StickerConfigInterface;
+import ly.img.android.sdk.models.config.OverlayConfig;
+import ly.img.android.sdk.models.constant.BlendMode;
 import ly.img.android.sdk.models.constant.Directory;
 import ly.img.android.sdk.models.state.CameraSettings;
 import ly.img.android.sdk.models.state.EditorLoadSettings;
@@ -50,6 +61,7 @@ import ly.img.android.sdk.tools.TransformEditorTool;
 import ly.img.android.ui.activities.CameraPreviewBuilder;
 import ly.img.android.ui.activities.ImgLyIntent;
 import ly.img.android.ui.activities.PhotoEditorBuilder;
+
 
 public class PESDKModule extends ReactContextBaseJavaModule {
 
@@ -81,6 +93,8 @@ public class PESDKModule extends ReactContextBaseJavaModule {
     public static final String cameraRollAllowedKey = "cameraRollAllowed";
     public static final String showFiltersInCameraKey = "showFiltersInCamera";
 
+    private ReactApplicationContext ctx;
+
     // Listen for onActivityResult
     private final ActivityEventListener mActivityEventListener = new BaseActivityEventListener() {
         @Override
@@ -107,10 +121,12 @@ public class PESDKModule extends ReactContextBaseJavaModule {
     public PESDKModule(ReactApplicationContext context) {
         super(context);
         context.addActivityEventListener(mActivityEventListener);
+
+        ctx = context;
     }
 
     // Config builder
-    private SettingsList buildConfig(ReadableMap options, @Nullable ReadableArray features, @Nullable String imagePath) {
+    private SettingsList buildConfig(ReadableMap options, @Nullable ReadableArray features, @Nullable ReadableMap custom, @Nullable String imagePath) {
         SettingsList settingsList = new SettingsList();
         settingsList
                 .getSettingsModel(EditorLoadSettings.class)
@@ -150,7 +166,6 @@ public class PESDKModule extends ReactContextBaseJavaModule {
         }
 
 
-
         for (Object f: featureList) {
             String feature = f.toString();
             switch (feature) {
@@ -186,6 +201,157 @@ public class PESDKModule extends ReactContextBaseJavaModule {
 
         config.setTools(tools);
 
+        if ( custom != null )
+        {
+            Boolean includeDefaultFilters = custom.hasKey("includeDefaultFilters") ? custom.getBoolean("includeDefaultFilters") : true;
+            Boolean includeDefaultOverlays = custom.hasKey("includeDefaultOverlays") ? custom.getBoolean("includeDefaultOverlays") : true;
+            Boolean includeDefaultStickerCategories = custom.hasKey("includeDefaultStickerCategories") ? custom.getBoolean("includeDefaultStickerCategories") : true;
+
+            /* Set custom Filters */
+            if( custom.hasKey("filters") || includeDefaultFilters == false )
+            {
+                /* Set Default Filter Array */
+                ArrayList<ImageFilterInterface> filters = new ArrayList<ImageFilterInterface>();
+
+                if(includeDefaultFilters){
+                    filters = config.getFilterConfig();
+                }else{
+                    filters.add(new NoneImageFilter());
+                }
+
+
+                /* Set Filters */
+                ReadableArray filtersConfig = custom.getArray("filters");
+                for (int i = 0; i < filtersConfig.size(); i++) {
+                    ReadableMap filter = filtersConfig.getMap(i);
+                    String filter_id = filter.getString("id");
+                    String filter_label = filter.getString("label");
+
+                    filters.add(new LutColorFilter(filter_id, ctx.getResources().getIdentifier(filter_id, "string", ctx.getPackageName()), R.drawable.imgly_filter_preview_photo, ImageSource.create(ctx.getResources().getIdentifier(filter_id, "drawable", ctx.getPackageName())), 5, 5, 128));
+                }
+
+                config.setFilters(filters);
+            }
+
+            /* Set custom Overlays */
+            if( custom.hasKey("overlays") || includeDefaultOverlays == false )
+            {
+                /* Set Default Overlay Array */
+                ArrayList<OverlayConfig> overlays = new ArrayList<OverlayConfig>();
+
+                if(includeDefaultFilters){
+                    overlays = config.getOverlays();
+                }else{
+                    overlays.add(OverlayConfig.NON_BACKDROP);
+                }
+
+
+                /* Set Overlays */
+                ReadableArray overlaysConfig = custom.getArray("overlays");
+                for (int i = 0; i < overlaysConfig.size(); i++) {
+                    ReadableMap overlay = overlaysConfig.getMap(i);
+                    String overlay_id = overlay.getString("id");
+                    String overlay_label = overlay.getString("label");
+                    String overlay_blendmode = overlay.getString("blendMode").toLowerCase();
+
+                    BlendMode defaultBlendMode = BlendMode.NORMAL;
+                    switch(overlay_blendmode){
+                        case "color_burn":
+                           defaultBlendMode = BlendMode.COLOR_BURN;
+                           break;
+                        case "darken":
+                            defaultBlendMode = BlendMode.DARKEN;
+                            break;
+                        case "lighten":
+                            defaultBlendMode = BlendMode.LIGHTEN;
+                            break;
+                        case "hard_light":
+                            defaultBlendMode = BlendMode.HARD_LIGHT;
+                            break;
+                        case "soft_light":
+                            defaultBlendMode = BlendMode.SOFT_LIGHT;
+                            break;
+                        case "multiply":
+                            defaultBlendMode = BlendMode.MULTIPLY;
+                            break;
+                        case "overlay":
+                            defaultBlendMode = BlendMode.OVERLAY;
+                            break;
+                        case "screen":
+                            defaultBlendMode = BlendMode.SCREEN;
+                            break;
+                        case "normal":
+                        default:
+                            defaultBlendMode = BlendMode.NORMAL;
+                    }
+
+                    overlays.add(
+                        new OverlayConfig(
+                            overlay_id,
+                            overlay_label,
+                            ImageSource.create(ctx.getResources().getIdentifier(overlay_id+"_thumb", "drawable", ctx.getPackageName())),
+                            ImageSource.create(ctx.getResources().getIdentifier(overlay_id, "drawable", ctx.getPackageName())),
+                            defaultBlendMode,
+                            1f
+                        )
+                    );
+                }
+
+                config.setOverlays(overlays);
+            }
+
+            /* Set custom Stickers */
+            if( custom.hasKey("stickerCategories") || includeDefaultStickerCategories == false )
+            {
+                /* Set Default Sticker Category Array */
+                ArrayList<StickerListConfigInterface> stickerCats = new ArrayList<StickerListConfigInterface>();
+
+                if(includeDefaultStickerCategories){
+                    stickerCats = config.getStickerConfig();
+                }
+
+
+                /* Set Filters */
+                ReadableArray stickerCatsConfig = custom.getArray("stickerCategories");
+                for (int i = 0; i < stickerCatsConfig.size(); i++) {
+                    ReadableMap stickerCat = stickerCatsConfig.getMap(i);
+                    String stickerCat_id = stickerCat.getString("id");
+                    String stickerCat_label = stickerCat.getString("label");
+
+                    ReadableArray stickersArray = stickerCat.getArray("stickers");
+                    ArrayList<StickerConfigInterface> stickers = new ArrayList<StickerConfigInterface>();
+
+                    for (int j = 0; j < stickersArray.size(); j++) {
+                        ReadableMap sticker = stickersArray.getMap(i);
+                        String sticker_id = sticker.getString("id");
+                        String sticker_label = sticker_id;
+                        if(sticker.hasKey("label"))
+                            sticker_label = sticker.getString("label");
+
+                        stickers.add(
+                            new ImageStickerConfig(
+                                sticker_id,
+                                sticker_label,
+                                ImageSource.create(ctx.getResources().getIdentifier(sticker_id+"_thumb", "drawable", ctx.getPackageName())),
+                                ImageSource.create(ctx.getResources().getIdentifier(sticker_id, "drawable", ctx.getPackageName()))
+                            )
+                        );
+                    }
+
+                    stickerCats.add(
+                        new StickerCategoryConfig(
+                            stickerCat_label,
+                            ImageSource.create(ctx.getResources().getIdentifier(stickerCat_id, "drawable", ctx.getPackageName())),
+                            stickers
+                        )
+                    );
+                }
+
+                config.setStickerLists(stickerCats);
+            }
+
+        }
+
         return settingsList;
     }
 
@@ -217,13 +383,13 @@ public class PESDKModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void openEditor(@NonNull String image, ReadableArray features, ReadableMap options, final Promise promise) {
+    public void openEditor(@NonNull String image, ReadableArray features, ReadableMap options, ReadableMap custom, final Promise promise) {
         if (getCurrentActivity() == null) {
            promise.reject(E_ACTIVITY_DOES_NOT_EXIST, "Activity does not exist");
         } else {
             mPESDKPromise = promise;
 
-            SettingsList settingsList = buildConfig(options, features, image.toString());
+            SettingsList settingsList = buildConfig(options, features, custom, image.toString());
 
             new PhotoEditorBuilder(getCurrentActivity())
                     .setSettingsList(settingsList)
@@ -232,13 +398,13 @@ public class PESDKModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void openCamera(ReadableArray features, ReadableMap options, final Promise promise) {
+    public void openCamera(ReadableArray features, ReadableMap options, ReadableMap custom, final Promise promise) {
         if (getCurrentActivity() == null) {
             promise.reject(E_ACTIVITY_DOES_NOT_EXIST, "Activity does not exist");
         } else {
             mPESDKPromise = promise;
 
-            SettingsList settingsList = buildConfig(options, features, null);
+            SettingsList settingsList = buildConfig(options, features, custom, null);
 
             new CameraPreviewBuilder(getCurrentActivity())
                     .setSettingsList(settingsList)
