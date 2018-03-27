@@ -228,7 +228,18 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                         String filter_id = filter.getString("id");
                         String filter_label = filter.getString("label");
 
-                        filters.add(new LutColorFilter(filter_id, ctx.getResources().getIdentifier(filter_id, "string", ctx.getPackageName()), R.drawable.imgly_filter_preview_photo, ImageSource.create(ctx.getResources().getIdentifier(filter_id, "drawable", ctx.getPackageName())), 5, 5, 128));
+                        int vTiles = 5;
+                        int hTiles = 5;
+                        int textureSize = 128;
+
+                        String[] filter_segments = filter_id.split("_");
+                        if(filter_segments.length >= 4){
+                            textureSize = Integer.parseInt(filter_segments[filter_segments.length-1]);
+                            hTiles = Integer.parseInt(filter_segments[filter_segments.length-2]);
+                            vTiles = Integer.parseInt(filter_segments[filter_segments.length-3]);
+                        }
+                        
+                        filters.add(new LutColorFilter(filter_id, ctx.getResources().getIdentifier(filter_id, "string", ctx.getPackageName()), R.drawable.imgly_filter_preview_photo, ImageSource.create(ctx.getResources().getIdentifier(filter_id, "drawable", ctx.getPackageName())), vTiles, hTiles, textureSize));
                     }
                 }
 
