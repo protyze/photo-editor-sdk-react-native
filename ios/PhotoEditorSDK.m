@@ -270,7 +270,6 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 		}
 
 
-
 		/* Set custom Stickers */
 		if ([custom valueForKey:@"stickerCategories"] || [includeDefaultStickerCategories boolValue] == NO)
 		{
@@ -305,9 +304,19 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 							if ([sticker valueForKey:@"label"] )
 								sticker_label = [sticker valueForKey:@"label"];
 
+							NSString *sticker_tint = @"none";
+								sticker_tint = [[sticker valueForKey:@"tintMode"] lowercaseString];
+
+							int tintMode = PESDKStickerTintModeNone;
+							if([sticker_tint isEqualToString:@"colorized"]){
+		                    	tintMode = PESDKStickerTintModeColorized;
+		                    }else if([sticker_tint isEqualToString:@"none"]){
+		                        tintMode = PESDKStickerTintModeNone;
+		                    }
+
 							NSString *baseRes = [@"res/" stringByAppendingString:sticker_id];
 
-							[stickers addObject:[[PESDKSticker alloc] initWithImageURL:[[NSBundle mainBundle] URLForResource:baseRes withExtension:@"png"] thumbnailURL:[[NSBundle mainBundle] URLForResource:[baseRes stringByAppendingString:@"_thumb"] withExtension:@"png"] identifier:sticker_id]];
+							[stickers addObject:[[PESDKSticker alloc] initWithImageURL:[[NSBundle mainBundle] URLForResource:baseRes withExtension:@"png"] thumbnailURL:[[NSBundle mainBundle] URLForResource:[baseRes stringByAppendingString:@"_thumb"] withExtension:@"png"] tintMode: tintMode identifier:sticker_id]];
 						}
 					}
 
@@ -336,7 +345,7 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
     });
 }
 
--(PESDKConfiguration*)_buildConfig: (NSDictionary *)options {
+-(PESDKConfiguration*)_buildConfig: (NSDictionary *)options custom:(NSDictionary*) custom {
     PESDKConfiguration* config = [[PESDKConfiguration alloc] initWithBuilder:^(PESDKConfigurationBuilder * builder) {
         [builder configurePhotoEditorViewController:^(PESDKPhotoEditViewControllerOptionsBuilder * b) {
             if ([options valueForKey:kBackgroundColorEditorKey]) {
@@ -365,6 +374,74 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
             // TODO: Video recording not supported currently
             b.allowedRecordingModesAsNSNumbers = @[[NSNumber numberWithInteger:RecordingModePhoto]];
         }];
+
+		[builder configureBrushColorToolController:^(PESDKBrushColorToolControllerOptionsBuilder * b) {
+			if(custom != nil)
+			{
+				NSNumber *includeDefaultBrushColors = [NSNumber numberWithBool:YES];
+				if ([custom valueForKey:@"includeDefaultBrushColors"]) {
+					includeDefaultBrushColors = [custom valueForKey:@"includeDefaultBrushColors"];
+				}
+
+				/* Set custom Brush Colors */
+				if ([custom valueForKey:@"brushColors"] || [includeDefaultBrushColors boolValue] == NO)
+				{
+					/* Set Default Brush Colors Array */
+					NSMutableArray<UIColor *> *brushColors = [[NSMutableArray alloc] init];
+
+					if( [includeDefaultBrushColors boolValue] == YES ) {
+						brushColors = [[b availableColors] mutableCopy];
+					}
+
+					/* Set Brush Colors */
+					if ([custom valueForKey:@"brushColors"] )
+					{
+						NSArray<NSString *> *brushConfig = [custom valueForKey:@"brushColors"];
+						NSEnumerator *enumerator = [brushConfig objectEnumerator];
+						id brushColor;
+						while (brushColor = [enumerator nextObject]) {
+							[brushColors addObject:[AVHexColor colorWithHexString: brushColor]];
+						}
+
+						b.availableColors = [brushColors copy];
+					}
+				}
+			}
+		}];
+
+		[builder configureStickerColorToolController:^(PESDKColorToolControllerOptionsBuilder * b) {
+			if(custom != nil)
+			{
+				NSNumber *includeDefaultStickerColors = [NSNumber numberWithBool:YES];
+				if ([custom valueForKey:@"includeDefaultStickerColors"]) {
+					includeDefaultStickerColors = [custom valueForKey:@"includeDefaultStickerColors"];
+				}
+
+				/* Set custom Sticker Colors */
+				if ([custom valueForKey:@"stickerColors"] || [includeDefaultStickerColors boolValue] == NO)
+				{
+					/* Set Default Sticker Colors Array */
+					NSMutableArray<UIColor *> *stickerColors = [[NSMutableArray alloc] init];
+
+					if( [includeDefaultStickerColors boolValue] == YES ) {
+						stickerColors = [[b availableColors] mutableCopy];
+					}
+
+					/* Set Sticker Colors */
+					if ([custom valueForKey:@"stickerColors"] )
+					{
+						NSArray<NSString *> *stickerConfig = [custom valueForKey:@"stickerColors"];
+						NSEnumerator *enumerator = [stickerConfig objectEnumerator];
+						id stickerColor;
+						while (stickerColor = [enumerator nextObject]) {
+							[stickerColors addObject:[AVHexColor colorWithHexString: stickerColor]];
+						}
+
+						b.availableColors = [stickerColors copy];
+					}
+				}
+			}
+		}];
     }];
 
     return config;
@@ -372,7 +449,7 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 
 RCT_EXPORT_METHOD(openEditor: (NSString*)path options: (NSArray *)features options: (NSDictionary*) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject) {
     UIImage* image = [UIImage imageWithContentsOfFile: path];
-    PESDKConfiguration* config = [self _buildConfig:options];
+    PESDKConfiguration* config = [self _buildConfig:options custom:custom];
     [self _openEditor:image config:config features:features custom:custom resolve:resolve reject:reject];
 }
 
@@ -384,7 +461,7 @@ RCT_EXPORT_METHOD(openEditor: (NSString*)path options: (NSArray *)features optio
 RCT_EXPORT_METHOD(openCamera: (NSArray*) features options:(NSDictionary*) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject) {
     __weak typeof(self) weakSelf = self;
     UIViewController *currentViewController = RCTPresentedViewController();
-    PESDKConfiguration* config = [self _buildConfig:options];
+    PESDKConfiguration* config = [self _buildConfig:options custom:custom];
 
     self.cameraController = [[PESDKCameraViewController alloc] initWithConfiguration:config];
 

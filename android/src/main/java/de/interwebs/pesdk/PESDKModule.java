@@ -34,9 +34,11 @@ import java.util.Map;
 import ly.img.android.sdk.decoder.ImageSource;
 import ly.img.android.sdk.filter.LutColorFilter;
 import ly.img.android.sdk.filter.NoneImageFilter;
+import ly.img.android.sdk.models.config.ColorConfig;
 import ly.img.android.sdk.models.config.Divider;
 import ly.img.android.sdk.models.config.StickerCategoryConfig;
 import ly.img.android.sdk.models.config.ImageStickerConfig;
+import ly.img.android.sdk.models.config.interfaces.ColorConfigInterface;
 import ly.img.android.sdk.models.config.interfaces.ImageFilterInterface;
 import ly.img.android.sdk.models.config.interfaces.ToolConfigInterface;
 import ly.img.android.sdk.models.config.interfaces.StickerListConfigInterface;
@@ -206,6 +208,8 @@ public class PESDKModule extends ReactContextBaseJavaModule {
             Boolean includeDefaultFilters = custom.hasKey("includeDefaultFilters") ? custom.getBoolean("includeDefaultFilters") : true;
             Boolean includeDefaultOverlays = custom.hasKey("includeDefaultOverlays") ? custom.getBoolean("includeDefaultOverlays") : true;
             Boolean includeDefaultStickerCategories = custom.hasKey("includeDefaultStickerCategories") ? custom.getBoolean("includeDefaultStickerCategories") : true;
+            Boolean includeDefaultBrushColors = custom.hasKey("includeDefaultBrushColors") ? custom.getBoolean("includeDefaultBrushColors") : true;
+            Boolean includeDefaultStickerColors = custom.hasKey("includeDefaultStickerColors") ? custom.getBoolean("includeDefaultStickerColors") : true;
 
             /* Set custom Filters */
             if( custom.hasKey("filters") || includeDefaultFilters == false )
@@ -339,18 +343,34 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                         ArrayList<StickerConfigInterface> stickers = new ArrayList<StickerConfigInterface>();
 
                         for (int j = 0; j < stickersArray.size(); j++) {
-                            ReadableMap sticker = stickersArray.getMap(i);
+                            ReadableMap sticker = stickersArray.getMap(j);
                             String sticker_id = sticker.getString("id");
+
+                            String sticker_tint = "none";
+                            if(sticker.hasKey("tintMode"))
+                                sticker_tint = sticker.getString("tintMode").toLowerCase();
+
                             String sticker_label = sticker_id;
                             if(sticker.hasKey("label"))
                                 sticker_label = sticker.getString("label");
+
+                            ImageStickerConfig.OPTION_MODE tintMode = ImageStickerConfig.OPTION_MODE.NON_OPTIONS;
+                            switch(sticker_tint){
+                                case "colorized":
+                                    tintMode = ImageStickerConfig.OPTION_MODE.INK_STICKER;
+                                    break;
+                                case "none":
+                                default:
+                                    tintMode = ImageStickerConfig.OPTION_MODE.NON_OPTIONS;
+                            }
 
                             stickers.add(
                                 new ImageStickerConfig(
                                     sticker_id,
                                     sticker_label,
                                     ImageSource.create(ctx.getResources().getIdentifier(sticker_id+"_thumb", "drawable", ctx.getPackageName())),
-                                    ImageSource.create(ctx.getResources().getIdentifier(sticker_id, "drawable", ctx.getPackageName()))
+                                    ImageSource.create(ctx.getResources().getIdentifier(sticker_id, "drawable", ctx.getPackageName())),
+                                    tintMode
                                 )
                             );
                         }
@@ -366,6 +386,100 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                 }
 
                 config.setStickerLists(stickerCats);
+            }
+
+            /* Set custom Brush Colors */
+            if( custom.hasKey("brushColors") || includeDefaultBrushColors == false )
+            {
+                /* Set Default Brush Colors Array */
+                ArrayList<ColorConfigInterface> brushColors = new ArrayList<ColorConfigInterface>();
+
+                if(includeDefaultBrushColors){
+                    brushColors = config.getBrushColors();
+                }
+
+
+                /* Set Brush Colors */
+                if( custom.hasKey("brushColors") ) {
+                    ReadableArray brushConfig = custom.getArray("brushColors");
+                    for (int i = 0; i < brushConfig.size(); i++) {
+                        String brushColor = brushConfig.getString(i).toLowerCase();
+                        
+                        // Remove #
+                        brushColor = brushColor.replace("#", "");
+                        
+                        // Convert from 3 to 6 char hex
+                        if(brushColor.length() == 3){
+                            char h1 =  brushColor.charAt(0);
+                            char h2 =  brushColor.charAt(1);
+                            char h3 =  brushColor.charAt(2);
+                            brushColor =    Character.toString(h1) + 
+                                            Character.toString(h1) + 
+                                            Character.toString(h2) + 
+                                            Character.toString(h2) + 
+                                            Character.toString(h3) + 
+                                            Character.toString(h3);
+                        }
+
+                        int colorInt = 0xff000000 | Integer.parseInt(brushColor, 16);
+
+                        brushColors.add(
+                            new ColorConfig(
+                                ctx.getResources().getIdentifier("pesdk_react_default_color_name", "string", ctx.getPackageName()),
+                                colorInt
+                            )
+                        );
+                    }
+                }
+
+                config.setBrushColors(brushColors);
+            }
+
+            /* Set custom Sticker Colors */
+            if( custom.hasKey("stickerColors") || includeDefaultStickerColors == false )
+            {
+                /* Set Default Sticker Colors Array */
+                ArrayList<ColorConfigInterface> stickerColors = new ArrayList<ColorConfigInterface>();
+
+                if(includeDefaultStickerColors){
+                    stickerColors = config.getStickerColorConfig();
+                }
+
+
+                /* Set Sticker Colors */
+                if( custom.hasKey("stickerColors") ) {
+                    ReadableArray stickerConfig = custom.getArray("stickerColors");
+                    for (int i = 0; i < stickerConfig.size(); i++) {
+                        String stickerColor = stickerConfig.getString(i).toLowerCase();
+                        
+                        // Remove #
+                        stickerColor = stickerColor.replace("#", "");
+                        
+                        // Convert from 3 to 6 char hex
+                        if(stickerColor.length() == 3){
+                            char h1 =  stickerColor.charAt(0);
+                            char h2 =  stickerColor.charAt(1);
+                            char h3 =  stickerColor.charAt(2);
+                            stickerColor =  Character.toString(h1) + 
+                                            Character.toString(h1) + 
+                                            Character.toString(h2) + 
+                                            Character.toString(h2) + 
+                                            Character.toString(h3) + 
+                                            Character.toString(h3);
+                        }
+
+                        int colorInt = 0xff000000 | Integer.parseInt(stickerColor, 16);
+
+                        stickerColors.add(
+                            new ColorConfig(
+                                ctx.getResources().getIdentifier("pesdk_react_default_color_name", "string", ctx.getPackageName()),
+                                colorInt
+                            )
+                        );
+                    }
+                }
+
+                config.setStickerColors(stickerColors);
             }
 
         }
