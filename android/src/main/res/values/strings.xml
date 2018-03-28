@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">PESDK</string>
+    <string name="pesdk_react_default_color_name">Color</string>
 </resources>
