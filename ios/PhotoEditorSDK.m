@@ -14,6 +14,9 @@
 NSString* const kBackgroundColorEditorKey = @"backgroundColorEditor";
 NSString* const kBackgroundColorMenuEditorKey = @"backgroundColorMenuEditor";
 NSString* const kBackgroundColorCameraKey = @"backgroundColorCamera";
+NSString* const kIconColor = @"iconColor";
+NSString* const kTextColor = @"textColor";
+NSString* const kAccentColor = @"accentColor";
 NSString* const kCameraRollAllowedKey = @"cameraRowAllowed";
 NSString* const kShowFiltersInCameraKey = @"showFiltersInCamera";
 
@@ -68,6 +71,9 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
              @"backgroundColorCameraKey":       kBackgroundColorCameraKey,
              @"backgroundColorEditorKey":       kBackgroundColorEditorKey,
              @"backgroundColorMenuEditorKey":   kBackgroundColorMenuEditorKey,
+             @"iconColor":   					kIconColor,
+             @"textColor":  					kTextColor,
+             @"accentColor":  					kAccentColor,
              @"cameraRollAllowedKey":           kCameraRollAllowedKey,
              @"showFiltersInCameraKey":         kShowFiltersInCameraKey,
              @"transformTool":                  [NSNumber numberWithInt: transformTool],
@@ -82,7 +88,7 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
     };
 }
 
--(void)_openEditor: (UIImage *)image config: (PESDKConfiguration *)config features: (NSArray*)features custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject {
+-(void)_openEditor: (UIImage *)image config: (PESDKConfiguration *)config features: (NSArray*)features options:(NSDictionary *) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject {
     self.resolver = resolve;
     self.rejecter = reject;
 
@@ -336,9 +342,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 
 
     self.editController = [[PESDKPhotoEditViewController alloc] initWithPhoto:image configuration:config menuItems:menuItems photoEditModel:photoEditModel];
-
     self.editController.delegate = self;
     UIViewController *currentViewController = RCTPresentedViewController();
+
+	if ([options valueForKey:kBackgroundColorEditorKey]) {
+		self.editController.toolbar.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorEditorKey]];
+	}
 
     dispatch_async(dispatch_get_main_queue(), ^{
         [currentViewController presentViewController:self.editController animated:YES completion:nil];
@@ -347,6 +356,15 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 
 -(PESDKConfiguration*)_buildConfig: (NSDictionary *)options custom:(NSDictionary*) custom {
     PESDKConfiguration* config = [[PESDKConfiguration alloc] initWithBuilder:^(PESDKConfigurationBuilder * builder) {
+
+		if ([options valueForKey:kBackgroundColorEditorKey]) {
+			builder.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorEditorKey]];
+		}
+
+		if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
+			builder.menuBackgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]];
+		}
+
         [builder configurePhotoEditorViewController:^(PESDKPhotoEditViewControllerOptionsBuilder * b) {
             if ([options valueForKey:kBackgroundColorEditorKey]) {
                 b.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorEditorKey]];
@@ -356,6 +374,52 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
                 b.menuBackgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]];
             }
 
+			b.actionButtonConfigurationBlock = ^(PESDKIconCaptionCollectionViewCell * _Nonnull cell, PESDKPhotoEditMenuItem * _Nonnull menuItem) {
+			    /*if ([menuItem.toolMenuItem.title isEqualToString:@"Transform"]) {
+			      cell.imageView.image = ...
+			  	}*/
+
+
+			  	if ([options valueForKey:kIconColor]) {
+					cell.iconTintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];;
+				}
+			  	if ([options valueForKey:kTextColor]) {
+				    cell.captionTintColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+
+			b.overlayButtonConfigurationClosure = ^(PESDKOverlayButton * _Nonnull button, enum PhotoEditOverlayAction menuItem) {
+				if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
+					button.backgroundColor = [[AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]] colorWithAlphaComponent:0.8];
+				}
+
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
         }];
 
         [builder configureCameraViewController:^(PESDKCameraViewControllerOptionsBuilder * b) {
@@ -375,6 +439,334 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
             b.allowedRecordingModesAsNSNumbers = @[[NSNumber numberWithInteger:RecordingModePhoto]];
         }];
 
+
+		[builder configureTransformToolController:^(PESDKTransformToolControllerOptionsBuilder * _Nonnull b) {
+			/*b.transformButtonConfigurationClosure = ^(PESDKButton * _Nonnull button, enum TransformAction menuItem) {
+			  	if ([options valueForKey:kIconColor]) {
+				    button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};*/
+			b.cropAspectButtonConfigurationClosure = ^(PESDKLabelBorderedCollectionViewCell * _Nonnull cell, PESDKCropAspect * menuItem) {
+			  	if ([options valueForKey:kTextColor]) {
+				    cell.textLabelTintColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+		}];
+		[builder configureFilterToolController:^(PESDKFilterToolControllerOptionsBuilder * _Nonnull b) {
+			b.filterIntensitySliderContainerConfigurationClosure = ^(UIView * _Nonnull view) {
+				if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
+					view.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]];
+				}
+			};
+			b.filterIntensitySliderConfigurationClosure = ^(PESDKSlider * _Nonnull slider) {
+				if ([options valueForKey:kAccentColor]) {
+					slider.filledTrackColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+					slider.thumbTintColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+					slider.thumbBackgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+				}
+				if ([options valueForKey:kIconColor]) {
+					slider.unfilledTrackColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			/*
+			b.filterCellConfigurationClosure = ^(PESDKFilterCollectionViewCell * _Nonnull cell, PESDKPhotoEffect * menuItem) {
+			  	if ([options valueForKey:kAccentColor]) {
+				    cell.selectionIndicator.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+				}
+			};*/
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+
+		}];
+		[builder configureFocusToolController:^(PESDKFocusToolControllerOptionsBuilder * _Nonnull b) {
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+		}];
+		[builder configureAdjustToolController:^(PESDKAdjustToolControllerOptionsBuilder * _Nonnull b) {
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+		}];
+		[builder configureTextToolController:^(PESDKTextToolControllerOptionsBuilder * _Nonnull b) {
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+		}];
+		[builder configureStickerOptionsToolController:^(PESDKStickerOptionsToolControllerOptionsBuilder * _Nonnull b) {
+			b.actionButtonConfigurationClosure = ^(UICollectionViewCell * _Nonnull view, enum StickerAction menuItem) {
+			 	PESDKIconCaptionCollectionViewCell *cell = (PESDKIconCaptionCollectionViewCell *)view;
+
+			  	if ([options valueForKey:kIconColor]) {
+					cell.iconTintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];;
+				}
+			  	if ([options valueForKey:kTextColor]) {
+				    cell.captionTintColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+
+			b.overlayButtonConfigurationClosure = ^(PESDKOverlayButton * _Nonnull button, enum StickerOverlayAction menuItem) {
+				if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
+					button.backgroundColor = [[AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]] colorWithAlphaComponent:0.8];
+				}
+
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+		}];
+		[builder configureStickerToolController:^(PESDKStickerToolControllerOptionsBuilder * _Nonnull b) {
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+		}];
+		[builder configureOverlayToolController:^(PESDKOverlayToolControllerOptionsBuilder * _Nonnull b) {
+			b.overlayIntensitySliderContainerConfigurationClosure = ^(UIView * _Nonnull view) {
+				if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
+					view.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]];
+				}
+			};
+			b.overlayIntensitySliderConfigurationClosure = ^(PESDKSlider * _Nonnull slider) {
+				if ([options valueForKey:kAccentColor]) {
+					slider.filledTrackColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+					slider.thumbTintColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+					slider.thumbBackgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+				}
+				if ([options valueForKey:kIconColor]) {
+					slider.unfilledTrackColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+
+			b.overlayModeSelectionViewConfigurationClosure = ^(UICollectionView * _Nonnull view) {
+				if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
+					view.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]];
+				}
+			};
+			b.overlayModeSelectionCellConfigurationClosure = ^(PESDKLabelBorderedCollectionViewCell * _Nonnull cell, enum PESDKBlendMode menuItem) {
+				if ([options valueForKey:kTextColor]) {
+					cell.textLabelTintColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+		}];
+		[builder configureBrushToolController:^(PESDKBrushToolControllerOptionsBuilder * _Nonnull b) {
+			b.sliderContainerConfigurationClosure = ^(UIView * _Nonnull view) {
+				if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
+					view.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]];
+				}
+			};
+			b.sliderConfigurationClosure = ^(PESDKSlider * _Nonnull slider) {
+				if ([options valueForKey:kAccentColor]) {
+					slider.filledTrackColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+					slider.thumbTintColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+					slider.thumbBackgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kAccentColor]];
+				}
+				if ([options valueForKey:kIconColor]) {
+					slider.unfilledTrackColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+
+			b.brushToolButtonConfigurationClosure = ^(UICollectionViewCell * _Nonnull view, enum BrushTool menuItem) {
+			 	PESDKIconCaptionCollectionViewCell *cell = (PESDKIconCaptionCollectionViewCell *)view;
+
+			  	if ([options valueForKey:kIconColor]) {
+					cell.iconTintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];;
+				}
+			  	if ([options valueForKey:kTextColor]) {
+				    cell.captionTintColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+
+			b.overlayButtonConfigurationClosure = ^(PESDKOverlayButton * _Nonnull button, enum BrushOverlayAction menuItem) {
+				if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
+					button.backgroundColor = [[AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]] colorWithAlphaComponent:0.8];
+				}
+
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+		}];
+
+		// Configure default color selections
 		[builder configureBrushColorToolController:^(PESDKBrushColorToolControllerOptionsBuilder * b) {
 			if(custom != nil)
 			{
@@ -407,6 +799,28 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 					}
 				}
 			}
+
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
 		}];
 
 		[builder configureStickerColorToolController:^(PESDKColorToolControllerOptionsBuilder * b) {
@@ -441,6 +855,27 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 					}
 				}
 			}
+
+			b.titleViewConfigurationClosure = ^(UIView * _Nonnull view) {
+				UILabel *label = (UILabel *)view;
+				if ([options valueForKey:kTextColor]) {
+					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
+				}
+			};
+			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
+			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kIconColor]) {
+					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+					[button setImage:image forState:UIControlStateNormal];
+					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
+				}
+			};
 		}];
     }];
 
@@ -450,7 +885,7 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 RCT_EXPORT_METHOD(openEditor: (NSString*)path options: (NSArray *)features options: (NSDictionary*) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject) {
     UIImage* image = [UIImage imageWithContentsOfFile: path];
     PESDKConfiguration* config = [self _buildConfig:options custom:custom];
-    [self _openEditor:image config:config features:features custom:custom resolve:resolve reject:reject];
+    [self _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
 }
 
 - (void)close {
@@ -473,7 +908,7 @@ RCT_EXPORT_METHOD(openCamera: (NSArray*) features options:(NSDictionary*) option
     [self.cameraController.view addGestureRecognizer:swipeDownRecognizer];
     [self.cameraController setCompletionBlock:^(UIImage * image, NSURL * _) {
         [currentViewController dismissViewControllerAnimated:YES completion:^{
-            [weakSelf _openEditor:image config:config features:features custom:custom resolve:resolve reject:reject];
+            [weakSelf _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
         }];
     }];
 
@@ -510,6 +945,9 @@ RCT_EXPORT_METHOD(openCamera: (NSArray*) features options:(NSDictionary*) option
                       [randomPath stringByAppendingString:@".jpg"] ];
 
     [data writeToFile:path atomically:YES];
+
+	UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+	
     self.resolver(path);
     dispatch_async(dispatch_get_main_queue(), ^{
         [self.editController.presentingViewController dismissViewControllerAnimated:YES completion:NULL];
