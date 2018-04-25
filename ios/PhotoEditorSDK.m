@@ -19,6 +19,9 @@ NSString* const kTextColor = @"textColor";
 NSString* const kAccentColor = @"accentColor";
 NSString* const kCameraRollAllowedKey = @"cameraRowAllowed";
 NSString* const kShowFiltersInCameraKey = @"showFiltersInCamera";
+NSString* const kSaveIcon = @"saveIcon";
+NSString* const kApplyIcon = @"applyIcon";
+NSString* const kDiscardIcon = @"discardIcon";
 
 BOOL *processedCustomItems = NO;
 
@@ -76,6 +79,9 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
              @"accentColor":  					kAccentColor,
              @"cameraRollAllowedKey":           kCameraRollAllowedKey,
              @"showFiltersInCameraKey":         kShowFiltersInCameraKey,
+             @"saveIcon":      					kSaveIcon,
+             @"applyIcon":      				kApplyIcon,
+             @"discardIcon":      				kDiscardIcon,
              @"transformTool":                  [NSNumber numberWithInt: transformTool],
              @"filterTool":                     [NSNumber numberWithInt: filterTool],
              @"focusTool":                      [NSNumber numberWithInt: focusTool],
@@ -375,10 +381,33 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
             }
 
 			b.actionButtonConfigurationBlock = ^(PESDKIconCaptionCollectionViewCell * _Nonnull cell, PESDKPhotoEditMenuItem * _Nonnull menuItem) {
-			    /*if ([menuItem.toolMenuItem.title isEqualToString:@"Transform"]) {
-			      cell.imageView.image = ...
-			  	}*/
 
+				
+				if(custom != nil)
+				{
+					/* Set custom Menu labels and icons */
+					if ([custom valueForKey:@"toolsMenu"])
+					{	
+						NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+
+						for (NSString* key in toolsMenu) {
+							id tool = [toolsMenu objectForKey:key];
+
+							if ([menuItem.toolMenuItem.title isEqualToString:key]) {
+								
+								if([tool valueForKey:@"label"]) {
+									cell.captionLabel.text =  [tool valueForKey:@"label"];
+								}
+								
+								if([tool valueForKey:@"icon"]) {
+									NSString *baseRes = [@"res/" stringByAppendingString:[tool valueForKey:@"icon"]];
+									UIImage *image = [UIImage imageNamed:baseRes];
+									cell.imageView.image = image;
+								}
+							}
+						}
+					}
+				}
 
 			  	if ([options valueForKey:kIconColor]) {
 					cell.iconTintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];;
@@ -395,6 +424,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -402,6 +437,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kSaveIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kSaveIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -441,6 +482,53 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 
 
 		[builder configureTransformToolController:^(PESDKTransformToolControllerOptionsBuilder * _Nonnull b) {
+			if(custom != nil)
+			{
+				NSNumber *includeDefaultTransforms = [NSNumber numberWithBool:YES];
+				if ([custom valueForKey:@"includeDefaultTransforms"]) {
+					includeDefaultTransforms = [custom valueForKey:@"includeDefaultTransforms"];
+				}
+
+				/* Set custom Transforms */
+				if ([custom valueForKey:@"transforms"] || [includeDefaultTransforms boolValue] == NO)
+				{
+					/* Set Default Transforms Array */
+					NSMutableArray<UIColor *> *transforms = [[NSMutableArray alloc] init];
+
+					if( [includeDefaultTransforms boolValue] == YES ) {
+						transforms = [[b allowedCropRatios] mutableCopy];
+					}
+
+					/* Set Transforms */
+					if ([custom valueForKey:@"transforms"] )
+					{
+						NSArray<NSString *> *transformsConfig = [custom valueForKey:@"transforms"];
+						NSEnumerator *enumerator = [transformsConfig objectEnumerator];
+						id transform;
+						while (transform = [enumerator nextObject]) {
+							NSNumber *rotatable = [NSNumber numberWithBool:YES];
+							if ([transform valueForKey:@"rotatable"]) {
+								rotatable = [transform valueForKey:@"rotatable"];
+							}
+
+							NSNumber *width = 0;
+							if ([transform valueForKey:@"width"]) {
+								width = [transform valueForKey:@"width"];
+							}
+
+							NSNumber *height = 0;
+							if ([transform valueForKey:@"height"]) {
+								height = [transform valueForKey:@"height"];
+							}
+							
+							[transforms addObject:[[PESDKCropAspect alloc] initWithWidth:[width floatValue] height:[height floatValue] localizedName:[transform valueForKey:@"label"] rotatable:[rotatable boolValue]]];
+						}
+
+						b.allowedCropRatios = [transforms copy];
+					}
+				}
+			}
+			
 			/*b.transformButtonConfigurationClosure = ^(PESDKButton * _Nonnull button, enum TransformAction menuItem) {
 			  	if ([options valueForKey:kIconColor]) {
 				    button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
@@ -457,8 +545,26 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				if ([options valueForKey:kTextColor]) {
 					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
 				}
+
+				/* Set custom Menu label */
+				if (custom != nil && [custom valueForKey:@"toolsMenu"])
+				{	
+					NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+					if([toolsMenu valueForKey:@"Transform"]) {
+						NSDictionary *tool = [toolsMenu objectForKey:@"Transform"];
+						if([tool valueForKey:@"label"]) {
+							label.text =  [tool valueForKey:@"label"];
+						}
+					}
+				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -466,7 +572,14 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
+					
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
 					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
@@ -501,8 +614,26 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				if ([options valueForKey:kTextColor]) {
 					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
 				}
+				
+				/* Set custom Menu label */
+				if (custom != nil && [custom valueForKey:@"toolsMenu"])
+				{	
+					NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+					if([toolsMenu valueForKey:@"Filter"]) {
+						NSDictionary *tool = [toolsMenu objectForKey:@"Filter"];
+						if([tool valueForKey:@"label"]) {
+							label.text =  [tool valueForKey:@"label"];
+						}
+					}
+				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -510,6 +641,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -525,8 +662,26 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				if ([options valueForKey:kTextColor]) {
 					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
 				}
+				
+				/* Set custom Menu label */
+				if (custom != nil && [custom valueForKey:@"toolsMenu"])
+				{	
+					NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+					if([toolsMenu valueForKey:@"Focus"]) {
+						NSDictionary *tool = [toolsMenu objectForKey:@"Focus"];
+						if([tool valueForKey:@"label"]) {
+							label.text =  [tool valueForKey:@"label"];
+						}
+					}
+				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -534,6 +689,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -548,8 +709,26 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				if ([options valueForKey:kTextColor]) {
 					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
 				}
+				
+				/* Set custom Menu label */
+				if (custom != nil && [custom valueForKey:@"toolsMenu"])
+				{	
+					NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+					if([toolsMenu valueForKey:@"Adjust"]) {
+						NSDictionary *tool = [toolsMenu objectForKey:@"Adjust"];
+						if([tool valueForKey:@"label"]) {
+							label.text =  [tool valueForKey:@"label"];
+						}
+					}
+				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -557,6 +736,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -571,8 +756,26 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				if ([options valueForKey:kTextColor]) {
 					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
 				}
+				
+				/* Set custom Menu label */
+				if (custom != nil && [custom valueForKey:@"toolsMenu"])
+				{	
+					NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+					if([toolsMenu valueForKey:@"Text"]) {
+						NSDictionary *tool = [toolsMenu objectForKey:@"Text"];
+						if([tool valueForKey:@"label"]) {
+							label.text =  [tool valueForKey:@"label"];
+						}
+					}
+				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -580,6 +783,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -616,8 +825,26 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				if ([options valueForKey:kTextColor]) {
 					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
 				}
+				
+				/* Set custom Menu label */
+				if (custom != nil && [custom valueForKey:@"toolsMenu"])
+				{	
+					NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+					if([toolsMenu valueForKey:@"Sticker"]) {
+						NSDictionary *tool = [toolsMenu objectForKey:@"Sticker"];
+						if([tool valueForKey:@"label"]) {
+							label.text =  [tool valueForKey:@"label"];
+						}
+					}
+				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -625,6 +852,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -641,6 +874,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -648,6 +887,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -688,8 +933,26 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				if ([options valueForKey:kTextColor]) {
 					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
 				}
+				
+				/* Set custom Menu label */
+				if (custom != nil && [custom valueForKey:@"toolsMenu"])
+				{	
+					NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+					if([toolsMenu valueForKey:@"Overlay"]) {
+						NSDictionary *tool = [toolsMenu objectForKey:@"Overlay"];
+						if([tool valueForKey:@"label"]) {
+							label.text =  [tool valueForKey:@"label"];
+						}
+					}
+				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -697,6 +960,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -749,8 +1018,26 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				if ([options valueForKey:kTextColor]) {
 					label.textColor = [AVHexColor colorWithHexString: [options valueForKey:kTextColor]];
 				}
+				
+				/* Set custom Menu label */
+				if (custom != nil && [custom valueForKey:@"toolsMenu"])
+				{	
+					NSDictionary *toolsMenu = [custom valueForKey:@"toolsMenu"];
+					if([toolsMenu valueForKey:@"Brush"]) {
+						NSDictionary *tool = [toolsMenu objectForKey:@"Brush"];
+						if([tool valueForKey:@"label"]) {
+							label.text =  [tool valueForKey:@"label"];
+						}
+					}
+				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -758,6 +1045,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -808,6 +1101,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -815,6 +1114,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -863,6 +1168,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.discardButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kDiscardIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kDiscardIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -870,6 +1181,12 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 				}
 			};
 			b.applyButtonConfigurationClosure = ^(PESDKButton * _Nonnull button) {
+				if ([options valueForKey:kApplyIcon]) {
+					NSString *baseRes = [@"res/" stringByAppendingString:[options valueForKey:kApplyIcon]];
+					UIImage *image = [UIImage imageNamed:baseRes];
+					[button setImage:image forState:UIControlStateNormal];
+				}
+
 				if ([options valueForKey:kIconColor]) {
 					UIImage *image = [button.imageView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
 					[button setImage:image forState:UIControlStateNormal];
@@ -885,7 +1202,9 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 RCT_EXPORT_METHOD(openEditor: (NSString*)path options: (NSArray *)features options: (NSDictionary*) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject) {
     UIImage* image = [UIImage imageWithContentsOfFile: path];
     PESDKConfiguration* config = [self _buildConfig:options custom:custom];
-    [self _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
+	dispatch_sync(dispatch_get_main_queue(), ^{  
+    	[self _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
+	});
 }
 
 - (void)close {
@@ -897,22 +1216,24 @@ RCT_EXPORT_METHOD(openCamera: (NSArray*) features options:(NSDictionary*) option
     __weak typeof(self) weakSelf = self;
     UIViewController *currentViewController = RCTPresentedViewController();
     PESDKConfiguration* config = [self _buildConfig:options custom:custom];
-
+	
     self.cameraController = [[PESDKCameraViewController alloc] initWithConfiguration:config];
 
-    [self.cameraController.cameraController setupWithInitialRecordingMode:RecordingModePhoto error:nil];
+	dispatch_sync(dispatch_get_main_queue(), ^{ 
+		[self.cameraController.cameraController setupWithInitialRecordingMode:RecordingModePhoto error:nil];
 
-    UISwipeGestureRecognizer* swipeDownRecognizer = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(close)];
-    swipeDownRecognizer.direction = UISwipeGestureRecognizerDirectionDown;
+		UISwipeGestureRecognizer* swipeDownRecognizer = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(close)];
+		swipeDownRecognizer.direction = UISwipeGestureRecognizerDirectionDown;
 
-    [self.cameraController.view addGestureRecognizer:swipeDownRecognizer];
-    [self.cameraController setCompletionBlock:^(UIImage * image, NSURL * _) {
-        [currentViewController dismissViewControllerAnimated:YES completion:^{
-            [weakSelf _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
-        }];
-    }];
+		[self.cameraController.view addGestureRecognizer:swipeDownRecognizer];
+		[self.cameraController setCompletionBlock:^(UIImage * image, NSURL * _) {
+			[currentViewController dismissViewControllerAnimated:YES completion:^{
+				[weakSelf _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
+			}];
+		}];
 
-    [currentViewController presentViewController:self.cameraController animated:YES completion:nil];
+		[currentViewController presentViewController:self.cameraController animated:YES completion:nil];
+	});
 }
 
 -(void)photoEditViewControllerDidCancel:(PESDKPhotoEditViewController *)photoEditViewController {
@@ -939,6 +1260,9 @@ RCT_EXPORT_METHOD(openCamera: (NSArray*) features options:(NSDictionary*) option
 -(void)photoEditViewController:(PESDKPhotoEditViewController *)photoEditViewController didSaveImage:(UIImage *)image imageAsData:(NSData *)data {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,
                                                          NSUserDomainMask, YES);
+	if([data length] == 0)
+		data = UIImageJPEGRepresentation(image, 0.85);
+
     NSString *documentsDirectory = [paths objectAtIndex:0];
     NSString *randomPath = [PhotoEditorSDK randomStringWithLength:10];
     NSString* path = [documentsDirectory stringByAppendingPathComponent:
