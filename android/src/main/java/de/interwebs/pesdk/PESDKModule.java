@@ -35,9 +35,11 @@ import ly.img.android.sdk.decoder.ImageSource;
 import ly.img.android.sdk.filter.LutColorFilter;
 import ly.img.android.sdk.filter.NoneImageFilter;
 import ly.img.android.sdk.models.config.ColorConfig;
+import ly.img.android.sdk.models.config.CropAspectConfig;
 import ly.img.android.sdk.models.config.Divider;
 import ly.img.android.sdk.models.config.StickerCategoryConfig;
 import ly.img.android.sdk.models.config.ImageStickerConfig;
+import ly.img.android.sdk.models.config.interfaces.AspectConfigInterface;
 import ly.img.android.sdk.models.config.interfaces.ColorConfigInterface;
 import ly.img.android.sdk.models.config.interfaces.ImageFilterInterface;
 import ly.img.android.sdk.models.config.interfaces.ToolConfigInterface;
@@ -210,6 +212,7 @@ public class PESDKModule extends ReactContextBaseJavaModule {
             Boolean includeDefaultStickerCategories = custom.hasKey("includeDefaultStickerCategories") ? custom.getBoolean("includeDefaultStickerCategories") : true;
             Boolean includeDefaultBrushColors = custom.hasKey("includeDefaultBrushColors") ? custom.getBoolean("includeDefaultBrushColors") : true;
             Boolean includeDefaultStickerColors = custom.hasKey("includeDefaultStickerColors") ? custom.getBoolean("includeDefaultStickerColors") : true;
+            Boolean includeDefaultTransforms = custom.hasKey("includeDefaultTransforms") ? custom.getBoolean("includeDefaultTransforms") : true;
 
             /* Set custom Filters */
             if( custom.hasKey("filters") || includeDefaultFilters == false )
@@ -242,7 +245,7 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                             hTiles = Integer.parseInt(filter_segments[filter_segments.length-2]);
                             vTiles = Integer.parseInt(filter_segments[filter_segments.length-3]);
                         }
-                        
+
                         filters.add(new LutColorFilter(filter_id, ctx.getResources().getIdentifier(filter_id, "string", ctx.getPackageName()), R.drawable.imgly_filter_preview_photo, ImageSource.create(ctx.getResources().getIdentifier(filter_id, "drawable", ctx.getPackageName())), vTiles, hTiles, textureSize));
                     }
                 }
@@ -404,20 +407,20 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                     ReadableArray brushConfig = custom.getArray("brushColors");
                     for (int i = 0; i < brushConfig.size(); i++) {
                         String brushColor = brushConfig.getString(i).toLowerCase();
-                        
+
                         // Remove #
                         brushColor = brushColor.replace("#", "");
-                        
+
                         // Convert from 3 to 6 char hex
                         if(brushColor.length() == 3){
                             char h1 =  brushColor.charAt(0);
                             char h2 =  brushColor.charAt(1);
                             char h3 =  brushColor.charAt(2);
-                            brushColor =    Character.toString(h1) + 
-                                            Character.toString(h1) + 
-                                            Character.toString(h2) + 
-                                            Character.toString(h2) + 
-                                            Character.toString(h3) + 
+                            brushColor =    Character.toString(h1) +
+                                            Character.toString(h1) +
+                                            Character.toString(h2) +
+                                            Character.toString(h2) +
+                                            Character.toString(h3) +
                                             Character.toString(h3);
                         }
 
@@ -451,20 +454,20 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                     ReadableArray stickerConfig = custom.getArray("stickerColors");
                     for (int i = 0; i < stickerConfig.size(); i++) {
                         String stickerColor = stickerConfig.getString(i).toLowerCase();
-                        
+
                         // Remove #
                         stickerColor = stickerColor.replace("#", "");
-                        
+
                         // Convert from 3 to 6 char hex
                         if(stickerColor.length() == 3){
                             char h1 =  stickerColor.charAt(0);
                             char h2 =  stickerColor.charAt(1);
                             char h3 =  stickerColor.charAt(2);
-                            stickerColor =  Character.toString(h1) + 
-                                            Character.toString(h1) + 
-                                            Character.toString(h2) + 
-                                            Character.toString(h2) + 
-                                            Character.toString(h3) + 
+                            stickerColor =  Character.toString(h1) +
+                                            Character.toString(h1) +
+                                            Character.toString(h2) +
+                                            Character.toString(h2) +
+                                            Character.toString(h3) +
                                             Character.toString(h3);
                         }
 
@@ -480,6 +483,38 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                 }
 
                 config.setStickerColors(stickerColors);
+            }
+
+            if( custom.hasKey("transforms") || includeDefaultTransforms == false )
+            {
+                /* Set Default Transforms Array */
+                ArrayList<AspectConfigInterface> transforms = new ArrayList<AspectConfigInterface>();
+
+                if(includeDefaultTransforms){
+                    transforms = config.getAspects();
+                } else {
+                    transforms.add(CropAspectConfig.FREE_CROP);
+                }
+
+
+                /* Set Sticker Colors */
+                if( custom.hasKey("transforms") ) {
+                    ReadableArray transformsConfig = custom.getArray("transforms");
+                    for (int i = 0; i < transformsConfig.size(); i++) {
+                        //String stickerColor = stickerConfig.getString(i).toLowerCase();
+
+                        ReadableMap transform = transformsConfig.getMap(i);
+                        String transform_id = transform.getString("id");
+                        Integer transform_width = transform.getInt("width");
+                        Integer transform_height = transform.getInt("height");
+                        String transform_label = transform.getString("label");
+                        Boolean transform_rotatable = transform.getBoolean("rotatable");
+
+                        transforms.add(new CropAspectConfig(ctx.getResources().getIdentifier(transform_id, "string", ctx.getPackageName()), transform_width, transform_height));
+                    }
+                }
+
+                config.setAspects(transforms);
             }
 
         }
