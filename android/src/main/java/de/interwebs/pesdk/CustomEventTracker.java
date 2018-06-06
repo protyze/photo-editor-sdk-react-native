@@ -74,7 +74,7 @@ public class CustomEventTracker extends EventTracker {
         googleAnalyticsTracker.setScreenName(menuState.getCurrentTool().getName());
         googleAnalyticsTracker.send(new HitBuilders.ScreenViewBuilder().build());
     }
-
+    /*
     @OnEvent(value = PESDKEvents.EditorMenuState_CANCEL_AND_LEAVE, ignoreReverts = true)
     protected void onLeaveToolWithCancel(EditorMenuState menuState) {
         HitBuilders.EventBuilder builder = new HitBuilders.EventBuilder()
@@ -258,7 +258,7 @@ public class CustomEventTracker extends EventTracker {
         }
     }
 
-
+    */
 
     @Override
     public int describeContents() {
