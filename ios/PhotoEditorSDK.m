@@ -51,6 +51,12 @@ typedef enum {
 @implementation PhotoEditorSDK
 RCT_EXPORT_MODULE(PESDK);
 
+- (NSArray<NSString *> *)supportedEvents
+{
+	return @[@"LogScreenView"];
+}
+
+
 static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 +(NSString *) randomStringWithLength: (int) len {
@@ -1202,6 +1208,10 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 RCT_EXPORT_METHOD(openEditor: (NSString*)path options: (NSArray *)features options: (NSDictionary*) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject) {
     UIImage* image = [UIImage imageWithContentsOfFile: path];
     PESDKConfiguration* config = [self _buildConfig:options custom:custom];
+
+	PESDK.analytics.isEnabled = YES;
+	[PESDK.analytics addAnalyticsClient:[[AnalyticsClient alloc] initWithMain:self]];
+
 	dispatch_sync(dispatch_get_main_queue(), ^{  
     	[self _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
 	});
@@ -1218,6 +1228,9 @@ RCT_EXPORT_METHOD(openCamera: (NSArray*) features options:(NSDictionary*) option
     PESDKConfiguration* config = [self _buildConfig:options custom:custom];
 	
     self.cameraController = [[PESDKCameraViewController alloc] initWithConfiguration:config];
+
+	PESDK.analytics.isEnabled = YES;
+	[PESDK.analytics addAnalyticsClient:[[AnalyticsClient alloc] initWithMain:self]];
 
 	dispatch_sync(dispatch_get_main_queue(), ^{ 
 		[self.cameraController.cameraController setupWithInitialRecordingMode:RecordingModePhoto error:nil];
@@ -1278,5 +1291,35 @@ RCT_EXPORT_METHOD(openCamera: (NSArray*) features options:(NSDictionary*) option
     });
 
 }
+
+@end
+
+
+@interface AnalyticsClient ()
+
+@property (strong, nonatomic) PhotoEditorSDK* main;
+
+@end
+
+@implementation AnalyticsClient
+
+-(id)initWithMain:(PhotoEditorSDK *)mainClass {
+	if( self = [super init] ) {
+		self.main = mainClass;
+	}
+
+	return self;
+}
+
+-(void)logScreenView:(PESDKAnalyticsScreenViewName _Nonnull)screenView {
+
+	if(screenView != @""){
+		[self.main sendEventWithName:@"LogScreenView" body:screenView];
+	}
+}
+
+-(void)logEvent:(PESDKAnalyticsEventName _Nonnull)event attributes:(NSDictionary<PESDKAnalyticsEventAttributeName, id> * _Nullable)attributes {
+}
+
 
 @end

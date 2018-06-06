@@ -8,8 +8,13 @@
 
 #import <Foundation/Foundation.h>
 #import "React/RCTBridgeModule.h"
+#import <React/RCTEventEmitter.h>
 #import <PhotoEditorSDK/PhotoEditorSDK-swift.h>
 
-@interface PhotoEditorSDK : NSObject <RCTBridgeModule, PESDKPhotoEditViewControllerDelegate>
+@interface PhotoEditorSDK : RCTEventEmitter <RCTBridgeModule, PESDKPhotoEditViewControllerDelegate>
 
 @end
+
+@interface AnalyticsClient : NSObject <PESDKAnalyticsClient> 
+-(nonnull instancetype)initWithMain:(PhotoEditorSDK *)mainClass OBJC_DESIGNATED_INITIALIZER;
+@end;
