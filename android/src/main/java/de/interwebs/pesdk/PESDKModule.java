@@ -9,6 +9,8 @@
 
 package de.interwebs.pesdk;
 
+import nl.onstuimig.perfectphoto.CustomEventTracker;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
@@ -144,6 +146,8 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                 );
 
 
+        settingsList.setEventProcessor(de.interwebs.pesdk.PESDKEvents.class);
+        settingsList.setEventTracker(new CustomEventTracker("UA-35482641-44"));
 
                 // TODO: Config options in PESDK v5 are limited compared to iOS (or I didn't find them)
 

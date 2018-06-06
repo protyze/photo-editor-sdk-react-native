@@ -5,14 +5,18 @@ buildscript {
 
     dependencies {
         classpath 'com.android.tools.build:gradle:2.3.3'
+        classpath 'com.neenbedankt.gradle.plugins:android-apt:1.8'
     }
 }
 
 apply plugin: 'com.android.library'
+apply plugin: 'com.neenbedankt.android-apt'
 
 dependencies {
     compile "com.facebook.react:react-native:+"
     compile 'ly.img.android:photo-editor-sdk:5.0.18'
+    compile 'com.google.android.gms:play-services-analytics:+'
+    apt 'ly.img.android:build-processor:5.0.18'
 }
 
 android {
@@ -38,4 +42,3 @@ android {
         }
     }
 }
-
