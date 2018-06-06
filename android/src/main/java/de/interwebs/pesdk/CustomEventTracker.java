@@ -59,7 +59,6 @@ public class CustomEventTracker extends EventTracker {
 
     public CustomEventTracker(String trackerId) {
         init(trackerId);
-        ctx = context;
     }
 
     private void init(String trackerId) {
@@ -74,6 +73,7 @@ public class CustomEventTracker extends EventTracker {
         googleAnalyticsTracker.setScreenName(menuState.getCurrentTool().getName());
         googleAnalyticsTracker.send(new HitBuilders.ScreenViewBuilder().build());
     }
+
     /*
     @OnEvent(value = PESDKEvents.EditorMenuState_CANCEL_AND_LEAVE, ignoreReverts = true)
     protected void onLeaveToolWithCancel(EditorMenuState menuState) {
@@ -257,8 +257,8 @@ public class CustomEventTracker extends EventTracker {
             googleAnalyticsTracker.send(builder.build());
         }
     }
-
     */
+
 
     @Override
     public int describeContents() {
