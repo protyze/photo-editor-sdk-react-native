@@ -980,6 +980,9 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 			};
 		}];
 		[builder configureBrushToolController:^(PESDKBrushToolControllerOptionsBuilder * _Nonnull b) {
+		
+			b.defaultBrushColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:1.0];
+			
 			b.sliderContainerConfigurationClosure = ^(UIView * _Nonnull view) {
 				if ([options valueForKey:kBackgroundColorMenuEditorKey]) {
 					view.backgroundColor = [AVHexColor colorWithHexString: [options valueForKey:kBackgroundColorMenuEditorKey]];
