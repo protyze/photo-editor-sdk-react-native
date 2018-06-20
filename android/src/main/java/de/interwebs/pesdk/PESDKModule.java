@@ -139,8 +139,8 @@ public class PESDKModule extends ReactContextBaseJavaModule {
                 .setImageSourcePath(imagePath)
                 .getSettingsModel(EditorSaveSettings.class)
                 // TODO: Make export directory configurable
-                .setExportDir(Directory.DCIM, "PESDK")
-                .setExportPrefix("PESDK_")
+                .setExportDir(Directory.DCIM, "perfectphoto")
+                .setExportPrefix("perfectphoto_")
                 .setSavePolicy(
                         EditorSaveSettings.SavePolicy.RETURN_ALWAYS_ONLY_OUTPUT
                 );
