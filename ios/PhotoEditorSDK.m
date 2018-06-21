@@ -1092,6 +1092,8 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 						}
 
 						b.availableColors = [brushColors copy];
+						
+						b.availableColorNames = [brushConfig copy];
 					}
 				}
 			}
@@ -1160,6 +1162,8 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 						}
 
 						b.availableColors = [stickerColors copy];
+						
+						b.availableColorNames = [stickerConfig copy];
 					}
 				}
 			}
