@@ -9,6 +9,7 @@
 #import "PhotoEditorSDK.h"
 #import "React/RCTUtils.h"
 #import "AVHexColor.h"
+#import <AssetsLibrary/AssetsLibrary.h>
 
 // Config options
 NSString* const kBackgroundColorEditorKey = @"backgroundColorEditor";
@@ -1289,8 +1290,11 @@ RCT_EXPORT_METHOD(openCamera: (NSArray*) features options:(NSDictionary*) option
                       [randomPath stringByAppendingString:@".jpg"] ];
 
     [data writeToFile:path atomically:YES];
-
-	UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+	
+	ALAuthorizationStatus status = [ALAssetsLibrary authorizationStatus];
+	if (status == ALAuthorizationStatusAuthorized) {
+		UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+	}
 	
     self.resolver(path);
     dispatch_async(dispatch_get_main_queue(), ^{
