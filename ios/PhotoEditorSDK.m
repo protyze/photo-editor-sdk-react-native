@@ -348,7 +348,7 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 	}
 
 
-    self.editController = [[PESDKPhotoEditViewController alloc] initWithPhoto:image configuration:config menuItems:menuItems photoEditModel:photoEditModel];
+    self.editController = [[PESDKPhotoEditViewController alloc] photoAsset:image configuration:config menuItems:menuItems photoEditModel:photoEditModel];
     self.editController.delegate = self;
     UIViewController *currentViewController = RCTPresentedViewController();
 
@@ -1208,7 +1208,7 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 }
 
 RCT_EXPORT_METHOD(openEditor: (NSString*)path options: (NSArray *)features options: (NSDictionary*) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject) {
-    UIImage* image = [UIImage imageWithContentsOfFile: path];
+    PESDKPhoto* image = [url:path];
     PESDKConfiguration* config = [self _buildConfig:options custom:custom];
 	dispatch_sync(dispatch_get_main_queue(), ^{  
     	[self _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
