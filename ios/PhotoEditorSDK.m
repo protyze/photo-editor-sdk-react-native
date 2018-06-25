@@ -95,7 +95,7 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
     };
 }
 
--(void)_openEditor: (UIImage *)image config: (PESDKConfiguration *)config features: (NSArray*)features options:(NSDictionary *) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject {
+-(void)_openEditor: (PESDKPhoto *)image config: (PESDKConfiguration *)config features: (NSArray*)features options:(NSDictionary *) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject {
     self.resolver = resolve;
     self.rejecter = reject;
 
