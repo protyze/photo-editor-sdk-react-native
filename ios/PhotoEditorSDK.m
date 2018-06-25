@@ -449,6 +449,8 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 					[button setImage:image forState:UIControlStateNormal];
 					button.tintColor = [AVHexColor colorWithHexString: [options valueForKey:kIconColor]];
 				}
+
+				[button setTitle: @"Done" forState:UIControlStateNormal];
 			};
 
 			b.overlayButtonConfigurationClosure = ^(PESDKOverlayButton * _Nonnull button, enum PhotoEditOverlayAction menuItem) {
