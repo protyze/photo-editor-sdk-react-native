@@ -1208,7 +1208,7 @@ static NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXY
 }
 
 RCT_EXPORT_METHOD(openEditor: (NSString*)path options: (NSArray *)features options: (NSDictionary*) options custom:(NSDictionary*) custom resolve: (RCTPromiseResolveBlock)resolve reject: (RCTPromiseRejectBlock)reject) {
-    PESDKPhoto* image = [[PESDKPhoto alloc] initWithUrl: path];
+    PESDKPhoto* image = [[PESDKPhoto alloc] initWithData:[NSData dataWithContentsOfFile:path]];
     PESDKConfiguration* config = [self _buildConfig:options custom:custom];
 	dispatch_sync(dispatch_get_main_queue(), ^{  
     	[self _openEditor:image config:config features:features options:options custom:custom resolve:resolve reject:reject];
